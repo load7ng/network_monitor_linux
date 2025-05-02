@@ -15,6 +15,9 @@ fi
 SUDO_USER="${SUDO_USER:-$USER}"
 SUDO_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
 
+# Get the script's directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
 # Install system dependencies
 echo "Installing system dependencies..."
 apt-get update
@@ -32,7 +35,7 @@ pip install psutil matplotlib pandas
 
 # Copy application files
 echo "Installing application files..."
-cp src/app.py "$INSTALL_DIR/"
+cp "$SCRIPT_DIR/src/app.py" "$INSTALL_DIR/"
 chmod +x "$INSTALL_DIR/app.py"
 
 # Create launcher script
@@ -45,7 +48,7 @@ EOF
 chmod +x "$LAUNCHER"
 
 # Install desktop entry
-cp load7ng-data-tracker.desktop /usr/share/applications/
+cp "$SCRIPT_DIR/load7ng-data-tracker.desktop" /usr/share/applications/
 
 # Create symbolic link for GTK bindings
 ln -sf /usr/lib/python3/dist-packages/gi "$INSTALL_DIR/venv/lib/python3.10/site-packages/"
@@ -53,13 +56,13 @@ ln -sf /usr/lib/python3/dist-packages/gi "$INSTALL_DIR/venv/lib/python3.10/site-
 # Add system-wide autostart entry
 echo "Setting up system-wide autostart..."
 mkdir -p /etc/xdg/autostart
-cp load7ng-data-tracker.desktop /etc/xdg/autostart/
+cp "$SCRIPT_DIR/load7ng-data-tracker.desktop" /etc/xdg/autostart/
 
 # Set up autostart for the installing user
 echo "Setting up user autostart..."
 USER_AUTOSTART_DIR="$SUDO_HOME/.config/autostart"
 mkdir -p "$USER_AUTOSTART_DIR"
-cp load7ng-data-tracker.desktop "$USER_AUTOSTART_DIR/"
+cp "$SCRIPT_DIR/load7ng-data-tracker.desktop" "$USER_AUTOSTART_DIR/"
 chown -R "$SUDO_USER:$SUDO_USER" "$USER_AUTOSTART_DIR"
 
 # Create uninstall script

@@ -3,6 +3,8 @@ import gi
 import os
 import sys
 import logging
+import json
+from pathlib import Path
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -16,10 +18,17 @@ import psutil
 import time
 from datetime import datetime
 
+# Constants
+CONFIG_DIR = os.path.expanduser("~/.config/load7ng-data-tracker")
+SESSION_FILE = os.path.join(CONFIG_DIR, "session.json")
+
 class NetworkMonitor:
     def __init__(self):
         logger.info("Initializing NetworkMonitor")
         try:
+            # Create config directory if it doesn't exist
+            os.makedirs(CONFIG_DIR, exist_ok=True)
+            
             # Use a system icon that's guaranteed to exist
             self.indicator = AppIndicator3.Indicator.new(
                 "network-monitor",
@@ -29,9 +38,7 @@ class NetworkMonitor:
             self.indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
             
             # Initialize data storage
-            self.session_start = datetime.now()
-            self.session_sent = 0
-            self.session_received = 0
+            self.load_session()
             self.last_sent = 0
             self.last_received = 0
             
@@ -46,6 +53,57 @@ class NetworkMonitor:
         except Exception as e:
             logger.error(f"Error initializing NetworkMonitor: {e}")
             sys.exit(1)
+    
+    def load_session(self):
+        """Load session data from file or initialize new session"""
+        try:
+            # Get system boot time with error handling
+            try:
+                boot_time = datetime.fromtimestamp(psutil.boot_time())
+            except Exception as e:
+                logger.error(f"Error getting system boot time: {e}")
+                boot_time = datetime.now()  # Fallback to current time
+            
+            if os.path.exists(SESSION_FILE):
+                with open(SESSION_FILE, 'r') as f:
+                    data = json.load(f)
+                    saved_session_start = datetime.fromisoformat(data['session_start'])
+                    
+                    # If session start is before system boot time or too old (>24h), start a new session
+                    if saved_session_start < boot_time or (datetime.now() - saved_session_start).total_seconds() > 86400:
+                        logger.info("System reboot detected or session too old, starting new session")
+                        self.start_new_session()
+                    else:
+                        self.session_start = saved_session_start
+                        self.session_sent = data['session_sent']
+                        self.session_received = data['session_received']
+                        logger.info(f"Loaded existing session data from {self.session_start}")
+            else:
+                self.start_new_session()
+                logger.info("Started new session")
+        except Exception as e:
+            logger.error(f"Error loading session: {e}")
+            self.start_new_session()
+    
+    def start_new_session(self):
+        """Initialize a new session with current time"""
+        self.session_start = datetime.now()
+        self.session_sent = 0
+        self.session_received = 0
+        self.save_session()
+    
+    def save_session(self):
+        """Save session data to file"""
+        try:
+            data = {
+                'session_start': self.session_start.isoformat(),
+                'session_sent': self.session_sent,
+                'session_received': self.session_received
+            }
+            with open(SESSION_FILE, 'w') as f:
+                json.dump(data, f)
+        except Exception as e:
+            logger.error(f"Error saving session: {e}")
         
     def create_menu(self):
         try:
@@ -53,6 +111,11 @@ class NetworkMonitor:
             self.rate_item = Gtk.MenuItem(label="Current rate: 0 B/s")
             self.rate_item.show()
             self.menu.append(self.rate_item)
+            
+            # Session info item (start time)
+            self.session_info_item = Gtk.MenuItem(label="Session started: Now")
+            self.session_info_item.show()
+            self.menu.append(self.session_info_item)
             
             # Session stats item
             self.session_item = Gtk.MenuItem(label="Session total: 0 B")
@@ -69,6 +132,17 @@ class NetworkMonitor:
             separator.show()
             self.menu.append(separator)
             
+            # Reset Session
+            reset_item = Gtk.MenuItem(label="Reset Session")
+            reset_item.connect("activate", self.reset_session)
+            reset_item.show()
+            self.menu.append(reset_item)
+            
+            # Separator
+            separator2 = Gtk.SeparatorMenuItem()
+            separator2.show()
+            self.menu.append(separator2)
+            
             # Quit item
             quit_item = Gtk.MenuItem(label="Quit")
             quit_item.connect("activate", self.quit)
@@ -78,6 +152,11 @@ class NetworkMonitor:
         except Exception as e:
             logger.error(f"Error creating menu: {e}")
             raise
+    
+    def reset_session(self, _):
+        """Reset the current session"""
+        self.start_new_session()
+        logger.info("Session reset")
     
     def format_bytes(self, bytes):
         try:
@@ -125,6 +204,11 @@ class NetworkMonitor:
             self.rate_item.set_label(
                 f"Current rate: ↑{self.format_bytes(sent_rate)}/s ↓{self.format_bytes(received_rate)}/s"
             )
+            
+            # Format session start time
+            session_start_str = self.session_start.strftime("%H:%M:%S")
+            self.session_info_item.set_label(f"Session started: {session_start_str}")
+            
             self.session_item.set_label(
                 f"Session total: ↑{self.format_bytes(self.session_sent)} ↓{self.format_bytes(self.session_received)}"
             )
@@ -139,13 +223,19 @@ class NetworkMonitor:
             self.last_sent = current_sent
             self.last_received = current_received
             
+            # Save session data periodically (every 60 seconds)
+            if int(session_duration.total_seconds()) % 60 == 0:
+                self.save_session()
+            
             return True
         except Exception as e:
             logger.error(f"Error updating stats: {e}")
             return True  # Keep the timer running even if we have an error
     
     def quit(self, _):
+        """Save session and quit"""
         logger.info("Quitting application")
+        self.save_session()
         Gtk.main_quit()
 
 def main():

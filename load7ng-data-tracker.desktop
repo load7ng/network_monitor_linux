@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=load7ng's Data Tracker
+Comment=Monitor network data usage in real-time
+Exec=/usr/local/bin/load7ng-data-tracker
+Icon=network-transmit-receive
+Terminal=false
+Categories=Network;System;Monitor
+StartupNotify=true 

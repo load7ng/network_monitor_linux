@@ -1,12 +1,16 @@
 # Network Traffic Monitor
 
-A Linux-based network traffic monitoring application that displays real-time data flow in the system tray with session-based tracking.
+A Linux-based network traffic monitoring application that displays real-time data flow in the system tray with session-based tracking and network speed testing capabilities.
 
 ## Features
 
 - Real-time network traffic monitoring in system tray
 - Upload and download speed display
 - Session-based data usage tracking
+- Integrated network speed testing
+  - Download and upload speed measurements
+  - Latency (ping) testing
+  - Background testing without UI freezing
 - Automatic session reset on system restart
 - Clean and intuitive GTK-based user interface
 - System tray integration with detailed statistics
@@ -25,6 +29,7 @@ sudo apt-get install python3-venv python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir
 - PyGObject >= 3.42.0
 - matplotlib >= 3.7.0
 - pandas >= 2.0.0
+- speedtest-cli >= 2.1.3
 - pytest >= 7.3.1 (for testing)
 
 ## Installation
@@ -63,8 +68,25 @@ After installation, you can:
   - Session start time
   - Total data transferred in session
   - Session duration
+  - Network speed test functionality
+    - Run speed tests on demand
+    - View latest speed test results (download/upload speeds and ping)
+    - Tests run in background without affecting application responsiveness
   - Option to reset session
   - Quit option
+
+### Network Speed Testing
+The application includes an integrated speed testing feature:
+- Access via the system tray menu
+- Click "Run Speed Test" to initiate a test
+- Tests measure:
+  - Download speed
+  - Upload speed
+  - Network latency (ping)
+- Results are displayed in human-readable format
+- Testing runs in the background without freezing the UI
+- Previous test results remain visible until a new test is run
+- Test results include timestamp for reference
 
 ### Session Handling
 - Sessions automatically reset on system restart
@@ -112,10 +134,10 @@ python -m pytest tests/
 ```
 
 ## Contributing
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+Please read (CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the (LICENSE) file for details.
 
 ## Author
 - load7ng 

@@ -31,7 +31,7 @@ mkdir -p "$INSTALL_DIR"
 echo "Setting up Python environment..."
 python3 -m venv "$INSTALL_DIR/venv"
 source "$INSTALL_DIR/venv/bin/activate"
-pip install psutil matplotlib pandas
+pip install psutil matplotlib pandas speedtest-cli
 
 # Copy application files
 echo "Installing application files..."

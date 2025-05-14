@@ -5,6 +5,8 @@ import sys
 import logging
 import json
 from pathlib import Path
+import threading
+import speedtest
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +43,15 @@ class NetworkMonitor:
             self.load_session()
             self.last_sent = 0
             self.last_received = 0
+            
+            # Initialize speedtest results
+            self.speedtest_results = {
+                'download': 0,
+                'upload': 0,
+                'ping': 0,
+                'last_test': None
+            }
+            self.is_testing = False
             
             # Create menu
             self.menu = Gtk.Menu()
@@ -132,6 +143,22 @@ class NetworkMonitor:
             separator.show()
             self.menu.append(separator)
             
+            # Speedtest section
+            self.speedtest_item = Gtk.MenuItem(label="Speed Test Results: No Data")
+            self.speedtest_item.show()
+            self.menu.append(self.speedtest_item)
+            
+            # Run speedtest button
+            self.run_speedtest_item = Gtk.MenuItem(label="Run Speed Test")
+            self.run_speedtest_item.connect("activate", self.run_speedtest)
+            self.run_speedtest_item.show()
+            self.menu.append(self.run_speedtest_item)
+            
+            # Separator
+            separator2 = Gtk.SeparatorMenuItem()
+            separator2.show()
+            self.menu.append(separator2)
+            
             # Reset Session
             reset_item = Gtk.MenuItem(label="Reset Session")
             reset_item.connect("activate", self.reset_session)
@@ -139,9 +166,9 @@ class NetworkMonitor:
             self.menu.append(reset_item)
             
             # Separator
-            separator2 = Gtk.SeparatorMenuItem()
-            separator2.show()
-            self.menu.append(separator2)
+            separator3 = Gtk.SeparatorMenuItem()
+            separator3.show()
+            self.menu.append(separator3)
             
             # Quit item
             quit_item = Gtk.MenuItem(label="Quit")
@@ -237,6 +264,73 @@ class NetworkMonitor:
         logger.info("Quitting application")
         self.save_session()
         Gtk.main_quit()
+
+    def run_speedtest(self, _):
+        """Run a speedtest in a separate thread"""
+        if self.is_testing:
+            logger.info("Speed test already in progress")
+            return
+        
+        self.is_testing = True
+        self.run_speedtest_item.set_sensitive(False)
+        self.speedtest_item.set_label("Speed Test in progress...")
+        
+        def speedtest_worker():
+            try:
+                logger.info("Starting speed test")
+                st = speedtest.Speedtest()
+                st.get_best_server()
+                
+                # Test download speed
+                download_speed = st.download()
+                self.speedtest_results['download'] = download_speed
+                
+                # Test upload speed
+                upload_speed = st.upload()
+                self.speedtest_results['upload'] = upload_speed
+                
+                # Get ping
+                self.speedtest_results['ping'] = st.results.ping
+                self.speedtest_results['last_test'] = datetime.now()
+                
+                # Update menu item in main thread
+                GLib.idle_add(self.update_speedtest_label)
+                logger.info("Speed test completed successfully")
+            except Exception as e:
+                logger.error(f"Error during speed test: {e}")
+                GLib.idle_add(lambda: self.speedtest_item.set_label("Speed Test failed"))
+            finally:
+                self.is_testing = False
+                GLib.idle_add(lambda: self.run_speedtest_item.set_sensitive(True))
+        
+        # Start speedtest in a separate thread
+        thread = threading.Thread(target=speedtest_worker)
+        thread.daemon = True
+        thread.start()
+    
+    def update_speedtest_label(self):
+        """Update the speedtest menu item with the latest results"""
+        if self.speedtest_results['last_test'] is None:
+            return
+        
+        download_speed = self.format_bits_per_second(self.speedtest_results['download'])
+        upload_speed = self.format_bits_per_second(self.speedtest_results['upload'])
+        ping = self.speedtest_results['ping']
+        last_test = self.speedtest_results['last_test'].strftime("%H:%M:%S")
+        
+        self.speedtest_item.set_label(
+            f"Speed Test Results (at {last_test}):\n"
+            f"↓ {download_speed} ↑ {upload_speed}\n"
+            f"Ping: {ping:.1f} ms"
+        )
+    
+    def format_bits_per_second(self, bits):
+        """Format bits per second into human readable format"""
+        for unit in ['bps', 'Kbps', 'Mbps', 'Gbps']:
+            if bits < 1000:
+                return f"{bits:.1f} {unit}"
+            bits /= 1000
+        return f"{bits:.1f} Tbps"
 
 def main():
     try:

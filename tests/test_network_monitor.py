@@ -39,6 +39,42 @@ class TestNetworkMonitor(unittest.TestCase):
             with self.subTest(input_bytes=input_bytes):
                 self.assertEqual(self.monitor.format_bytes_short(input_bytes), expected)
     
+    def test_format_bits_per_second(self):
+        test_cases = [
+            (0, "0.0 bps"),
+            (999, "999.0 bps"),
+            (1000, "1.0 Kbps"),
+            (1000*1000, "1.0 Mbps"),
+            (1000*1000*1000, "1.0 Gbps"),
+        ]
+        for input_bits, expected in test_cases:
+            with self.subTest(input_bits=input_bits):
+                self.assertEqual(self.monitor.format_bits_per_second(input_bits), expected)
+    
+    @patch('speedtest.Speedtest')
+    def test_speedtest_functionality(self, mock_speedtest):
+        # Mock speedtest instance
+        mock_st = MagicMock()
+        mock_st.download.return_value = 50_000_000  # 50 Mbps
+        mock_st.upload.return_value = 20_000_000    # 20 Mbps
+        mock_st.results.ping = 15.5                 # 15.5 ms
+        mock_speedtest.return_value = mock_st
+        
+        # Verify initial state
+        self.assertFalse(self.monitor.is_testing)
+        self.assertIsNone(self.monitor.speedtest_results['last_test'])
+        
+        # Run speedtest
+        self.monitor.run_speedtest(None)
+        
+        # Verify speedtest was initiated
+        self.assertTrue(self.monitor.is_testing)
+        
+        # Mock the completion of speedtest
+        mock_st.get_best_server.assert_called_once()
+        mock_st.download.assert_called_once()
+        mock_st.upload.assert_called_once()
+    
     @patch('psutil.net_io_counters')
     def test_update_stats(self, mock_net_io):
         # Mock network IO counters

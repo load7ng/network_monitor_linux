@@ -19,7 +19,7 @@ def check_dependencies():
     # Check for GTK and AppIndicator
     try:
         gi.require_version('Gtk', '3.0')
-        gi.require_version('AppIndicator3', '0.1')
+        gi.require_version('AyatanaAppIndicator3', '0.1')
     except ValueError as e:
         missing_deps.append(str(e))
     
@@ -49,8 +49,8 @@ check_dependencies()
 
 # Configure GTK
 gi.require_version('Gtk', '3.0')
-gi.require_version('AppIndicator3', '0.1')
-from gi.repository import Gtk, AppIndicator3, GLib
+gi.require_version('AyatanaAppIndicator3', '0.1')
+from gi.repository import Gtk, AyatanaAppIndicator3 as AppIndicator3, GLib
 import psutil
 import time
 from datetime import datetime
@@ -87,6 +87,9 @@ class NetworkMonitor:
                 'last_test': None
             }
             self.is_testing = False
+            
+            # Add a flag to skip the first update
+            self.first_update = True
             
             # Create menu
             self.menu = Gtk.Menu()
@@ -248,6 +251,13 @@ class NetworkMonitor:
             net_io = psutil.net_io_counters()
             current_sent = net_io.bytes_sent
             current_received = net_io.bytes_recv
+            
+            # Skip the first update to avoid spike
+            if self.first_update:
+                self.last_sent = current_sent
+                self.last_received = current_received
+                self.first_update = False
+                return True
             
             # Calculate rates
             sent_rate = current_sent - self.last_sent

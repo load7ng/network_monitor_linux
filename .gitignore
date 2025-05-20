@@ -39,4 +39,18 @@ Thumbs.db
 
 # Application specific
 data/*
-!data/.gitkeep 
+!data/.gitkeep
+
+# System-wide install location (for local testing)
+/opt/load7ng-data-tracker/
+
+# Standalone uninstall script (if generated, but keep if tracked)
+# uninstall.sh
+
+# Test/coverage artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Logs
+*.log 

@@ -16,17 +16,18 @@ A Linux-based network traffic monitoring application that displays real-time dat
 - System tray integration with detailed statistics
 - Autostart capability
 - Easy installation and uninstallation
+- **Initial spike fix:** Counters now start cleanly after launch, avoiding a false high value on first start
 
 ## Requirements
 
 ### System Dependencies
+The install script will handle all dependencies automatically. If you need to install manually, use:
 ```bash
-sudo apt-get install python3-venv python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-appindicator3-0.1
+sudo apt-get install build-essential python3-dev pkg-config libcairo2-dev libgirepository1.0-dev libglib2.0-dev gir1.2-gtk-3.0 python3-gi python3-gi-cairo gir1.2-ayatanaappindicator3-0.1 python3-venv python3-pip
 ```
 
-### Python Dependencies
+### Python Dependencies (installed automatically by the script)
 - psutil >= 5.9.0
-- PyGObject >= 3.42.0
 - matplotlib >= 3.7.0
 - pandas >= 2.0.0
 - speedtest-cli >= 2.1.3
@@ -46,7 +47,7 @@ sudo ./install.sh
 ```
 
 The installer will:
-- Install required system dependencies
+- Install all required system dependencies
 - Set up a Python virtual environment
 - Install Python packages
 - Create necessary desktop entries
@@ -62,7 +63,7 @@ After installation, you can:
 3. The application will start automatically on system boot (can be disabled)
 
 ### Features
-- System tray icon shows current upload/download speeds
+- System tray icon shows current upload/download speeds (see note below for label visibility)
 - Click the icon to view the menu with:
   - Current transfer rates
   - Session start time
@@ -95,10 +96,24 @@ The application includes an integrated speed testing feature:
 - 24-hour maximum session duration
 
 ### Uninstallation
-To remove the application:
+To remove the application, you can use either of these commands:
 ```bash
 sudo /opt/load7ng-data-tracker/uninstall.sh
+# or (from the repo root)
+sudo ./uninstall.sh
 ```
+
+## AppIndicator Label Visibility (Important Note)
+- **On GNOME (default for Ubuntu/Kali):** Only the icon is shown in the top bar; the real-time label is hidden by the desktop environment. This is a GNOME limitation.
+- **On XFCE, MATE, or some other desktops:** The label (showing real-time data) is visible next to the icon.
+- The app always updates the label, but whether it is visible depends on your desktop environment.
+- For full label visibility, consider using XFCE or MATE.
+
+## Troubleshooting
+- If you see a spike in the counter at first launch, update to the latest version (this is now fixed).
+- If the install script fails, ensure you are running it with `sudo` and your system is up to date.
+- If the tray icon appears but no label is visible, see the note above about desktop environment limitations.
+- For any missing dependencies, rerun the install script or check the list above.
 
 ## Development
 
@@ -124,7 +139,7 @@ network_monitor/
 ├── data/               # For future data storage
 ├── requirements.txt    # Python dependencies
 ├── install.sh         # Installation script
-├── uninstall.sh       # Created during installation
+├── uninstall.sh       # Standalone uninstall script
 └── load7ng-data-tracker.desktop
 ```
 

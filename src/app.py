@@ -12,6 +12,41 @@ import speedtest
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def check_dependencies():
+    """Check if all required system dependencies are available"""
+    missing_deps = []
+    
+    # Check for GTK and AppIndicator
+    try:
+        gi.require_version('Gtk', '3.0')
+        gi.require_version('AppIndicator3', '0.1')
+    except ValueError as e:
+        missing_deps.append(str(e))
+    
+    # Check for required Python packages
+    required_packages = {
+        'psutil': 'psutil',
+        'gi': 'PyGObject',
+        'matplotlib': 'matplotlib',
+        'pandas': 'pandas',
+        'speedtest': 'speedtest-cli'
+    }
+    
+    for module, package in required_packages.items():
+        try:
+            __import__(module)
+        except ImportError:
+            missing_deps.append(f"Python package '{package}' is not installed")
+    
+    if missing_deps:
+        error_msg = "Missing dependencies:\n" + "\n".join(missing_deps)
+        error_msg += "\n\nPlease run the installation script (install.sh) to install all required dependencies."
+        logger.error(error_msg)
+        sys.exit(1)
+
+# Check dependencies before proceeding
+check_dependencies()
+
 # Configure GTK
 gi.require_version('Gtk', '3.0')
 gi.require_version('AppIndicator3', '0.1')
